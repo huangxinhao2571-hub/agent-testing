@@ -1,42 +1,38 @@
 import re
 from backend.common import respones,jwt_utils,create_id
 from backend.repositories import user_repositories
+from backend.dto import user_dto
+from pydantic import ValidationError
 
-def service_register(username,password,role=0):
+def service_register(user_info):
     """
     注册 接口的业务逻辑处理
       数据校验
       json数据返回
 
-    :param username:手机号
-    :param password:密码
-    :param role:用户角色
+    :param user_info: 前端传入的注册 JSON 数据，包含 username、password
     :return:返回接口对应响应：成功 or 失败
     """
+    try:
+        dto = user_dto.UserRegisterDTO(**user_info)
+    except ValidationError as E:
+        print(f"参数错误：{E}")
+        return respones.invalid_parameter(
+            msg="参数错误",
+            data=E.errors()
+        )
 
-    # 注册参数校验
-    if not username or not password:
-        return respones.missing_parameter(msg="账号密码不允许为空")
-
-    if len(username) != 11 or len(password) < 6 or len(password) > 10:
-        return respones.invalid_parameter(msg="请输入正确格式账号密码")
+    username = dto.username
+    password = dto.password
 
     if user_repositories.get_user_by_username(username):
         return respones.invalid_parameter(msg="用户名已存在")
 
-
-    username = username.strip()
-    if not re.match(r"^1[3-9]\d{9}$", username):
-        return respones.invalid_parameter(msg="手机号格式不正确")
-
-
     user_id = create_id.create_id()
-
-
 
     # 添加账号密码入库
     try:
-        result = user_repositories.create_user(username,password,role,user_id,)
+        result = user_repositories.create_user(username,password,user_id)
         if not result:
             return respones.unknown_error(msg="注册失败")
 
@@ -47,12 +43,19 @@ def service_register(username,password,role=0):
 
     else:
         # 返回注册接口json响应
-        return respones.success(msg="注册成功", data={})
+        return respones.success(
+            msg="注册成功",
+            data={
+                "username":username,
+                "password":password,
+                "role":0
+            }
+        )
 
 
 
 
-def service_login(username,password):
+def service_login(user_info):
     """
     登录 接口的业务逻辑处理
       数据校验
@@ -60,20 +63,21 @@ def service_login(username,password):
       token生成
       json数据返回
 
-    :param username:手机号
-    :param password:密码
+    :param user_info:前端传入的注册 JSON 数据，包含 username、password
     :return:返回接口对应响应：成功 or 失败
     """
     # 登陆参数校验
-    if not username or not password:
-        return respones.missing_parameter(msg="账号密码不允许为空")
+    try:
+        dto = user_dto.UserLoginDTO(**user_info)
+    except ValidationError as E:
+        print(f"参数错误{E}")
+        return respones.invalid_parameter(
+            msg="参数错误",
+            data=E.errors()
+        )
 
-    if len(username) != 11 or len(password) < 6 or len(password) > 10:
-        return respones.invalid_parameter(msg="请输入正确格式账号密码")
-
-    username = username.strip()
-    if not re.match(r"^1[3-9]\d{9}$", username):
-        return respones.invalid_parameter(msg="手机号格式不正确")
+    username = dto.username
+    password = dto.password
 
 
     # 业务逻辑校验
@@ -82,8 +86,8 @@ def service_login(username,password):
         return respones.invalid_parameter(msg="用户未注册")
 
     # 查询数据库中的用户名、密码、角色、user_id、状态
-    user_info = user_repositories.get_userinfo_by_username(username)
-    db_username,db_password,db_role,db_user_id,db_status = user_info
+    db_user_info = user_repositories.get_userinfo_by_username(username)
+    db_username,db_password,db_role,db_user_id,db_status = db_user_info
     print(db_username,db_password,db_role,db_user_id,db_status)
 
     # 校验数据库中的密码是否正确

@@ -1,18 +1,17 @@
 from backend.extensions import db
 
 
-def create_user(username,password,role,user_id):
+def create_user(username,password,user_id):
     """
     注册接口校验通过
         将用户信息存入数据库
         执行inset语句
     :param username: 账号
     :param password: 密码
-    :param role: 用户角色
     :return: 返回成功或失败：1或者0
     """
-    sql = "insert into users (username,password,role,user_id) values (%s,%s,%s,%s)"
-    return db.db_execute(sql,[username,password,role,user_id])
+    sql = "insert into users (username,password,role,user_id) values (%s,%s,0,%s)"
+    return db.db_execute(sql,[username,password,user_id])
 
 
 def get_user_by_username(username):

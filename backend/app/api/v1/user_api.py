@@ -12,11 +12,8 @@ def register():
 
     :return: service模块返回接口对应响应
     """
-    username = request.json.get("username")
-    password = request.json.get("password")
-    role = request.json.get("role")
-
-    result = user_service.service_register(username,password,role)
+    user_info = request.get_json(silent=True) or {}
+    result = user_service.service_register(user_info)
     return result
 
 
@@ -24,10 +21,8 @@ def register():
 
 @user_api_bp.route("/login",methods=["POST"])
 def login():
-    username = request.json.get("username")
-    password = request.json.get("password")
-
-    result = user_service.service_login(username,password)
+    user_info = request.get_json(silent=True) or {}
+    result = user_service.service_login(user_info)
     return result
 
 
