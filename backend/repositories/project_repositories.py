@@ -1,3 +1,5 @@
+from unittest import result
+
 from backend.extensions import db
 
 def create_project(project_name: str, project_describe: str, project_password: str,project_creator_id):
@@ -70,4 +72,37 @@ def delete_project(project_id):
     WHERE project_id = %s
     """
     result = db.db_execute(sql,[project_id])
+    return result
+
+
+def list_projects_by_creator(project_creator_id,page,page_size,project_name=None):
+    """
+    1、执行查询项目列表，根据user_id查询该账号所有状态正常的项目
+    2、动态校验projectname，校验是搜索还是全局查，动态sql
+    :param project_creator_id:
+    :param page:
+    :param page_size:
+    :return:
+    """
+    offset = (page - 1) * page_size # offset是算出跳过多少条
+
+    sql = """
+        SELECT project_id,project_name,project_describe,updated_at,project_status 
+        FROM projects 
+        WHERE project_creator_id = %s 
+          AND project_status = '1' 
+    """
+    param = [project_creator_id]
+
+    if project_name:
+        sql += " AND project_name like %s"
+        param.append(f"%{project_name}%")
+
+    sql += """
+        ORDER BY created_at 
+        DESC LIMIT %s OFFSET %s
+    """
+    param.extend([page_size,offset])
+
+    result = db.db_fetchall_dict(sql,param)
     return result

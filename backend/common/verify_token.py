@@ -9,6 +9,9 @@ def verify_token():
     作用1: 全局鉴权拦截器
     如果请求接口不是登陆和注册，统一校验token
 
+    作用2: 用户状态动态校验
+    校验从token中获取的user_id，也就是当前用户的状态是否正常
+
     作用2: 将token解码后的payload存入g对象中，供后续接口使用:如user_id
     :return:
     """

@@ -1,5 +1,4 @@
 from flask import Blueprint,request,g
-from backend.common import respones
 from backend.services import project_service
 
 
@@ -17,8 +16,6 @@ def create():
     project_creator_id = g.payload.get("user_id")
     result = project_service.service_create(project_info,project_creator_id)
     return result
-
-
 
 
 
@@ -55,24 +52,17 @@ def delete():
 
 
 
-@project_api_bp.route("/list")
-def list():
+@project_api_bp.route("/project_list",methods=["GET"])
+def project_list():
     """
     获取项目列表信息接口
     :return:
     """
-    return respones.success(data=[])
+    project_params = request.args.to_dict()
+    project_creator_id = g.payload.get("user_id")
+    result = project_service.service_list(project_params,project_creator_id)
+    return result
 
 
 
 
-
-
-
-@project_api_bp.route("/search")
-def search():
-    """
-    搜索项目接口
-    :return:
-    """
-    return respones.success(data=[])

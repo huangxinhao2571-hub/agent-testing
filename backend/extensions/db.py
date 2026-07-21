@@ -56,7 +56,7 @@ def db_fetchall(sql,param:list):
         接口的业务逻辑service中，对数据库的操作封装
     :param sql:
     :param param:
-    :return: 以元祖的方式返回(x,x,x),(x,x,x)
+    :return: 以元祖的方式返回[(x,x,x),(x,x,x)]
     """
     conn = Pool.connection()
 
@@ -112,3 +112,29 @@ def db_execute_returning_one(sql, param: list):
     finally:
         cursor.close()
         conn.close()
+
+
+def db_fetchall_dict(sql,param:list):
+    """
+    将sql查出的数据，和数据库字段名进行[{key:value}]的整合，作为接口的返回data
+    :param sql: 
+    :param param: 
+    :return: 
+    """
+    conn = Pool.connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(sql,param)
+        des = [i[0] for i in cursor.description]
+
+        rows = cursor.fetchall()
+
+        result = [dict(zip(des,row)) for row in rows]
+        return result
+
+    finally:
+        cursor.close()
+        conn.close()
+
+

@@ -1,5 +1,8 @@
 from backend.common import respones
+from backend.common.validate_dto import validate_dto
 from backend.repositories import project_repositories
+from backend.dto import project_dto
+
 
 
 def check_project(project_id,project_creator_id):
@@ -14,17 +17,17 @@ def check_project(project_id,project_creator_id):
     """
     try:
         # 先校验project_id是否存在，project_status是否为1，以及project_creator_id人是否有权限
-        project_info = project_repositories.check_project_permission(project_id)
+        db_project_info = project_repositories.check_project_permission(project_id)
 
     except Exception as E:
         print(f"校验项目信息失败：{E}")
         return respones.unknown_error(msg="校验项目信息失败")
 
     else:
-        if project_info is None:
+        if db_project_info is None:
             return respones.not_found(msg="项目不存在")
 
-        db_project_creator_id,db_project_status = project_info
+        db_project_creator_id,db_project_status = db_project_info
 
         if db_project_status != 1:
             return respones.not_found(msg="项目不存在")
@@ -37,25 +40,23 @@ def check_project(project_id,project_creator_id):
 
 
 
-def service_create(data,project_creator_id):
+def service_create(project_info,project_creator_id):
         """
         创建应用service层实现方法
-        :param project_name:
-        :param project_describe:
-        :param project_password:
+        :param project_info:
+        :param project_creator_id:
         :return:
         """
-        project_name = data.get("project_name")
-        project_describe = data.get("project_describe")
-        project_password = data.get("project_password")
 
+        # dto参数校验
+        dto,error = validate_dto(project_dto.ProjectCreateDTO,project_info)
+        if error:
+            return error
 
-        # 参数缺失校验
-        if not project_name or not project_describe or not project_password:
-            return respones.missing_parameter(msg="参数不能为空")
+        project_name = dto.project_name
+        project_describe = dto.project_describe
+        project_password = dto.project_passwords
 
-        if len(project_name) > 10 or len(project_describe) > 100 or len(project_password) > 8:
-            return respones.invalid_parameter(msg="项目名称最多10位，描述最多100位，密码最多8位")
 
         try:
             # 将项目信息写入数据库
@@ -80,31 +81,23 @@ def service_create(data,project_creator_id):
 
 
 
-def service_update(data,project_creator_id):
+def service_update(project_info,project_creator_id):
     """
     修改项目的service实现方法
     :param data: 获取前端传参json
     :param project_creator_id: 获取token解析的user_id
     :return:
     """
-    # 获取前端请求中传的project_id
-    project_id = data.get("project_id")
+    # dto参数校验
+    dto,dto_error = validate_dto(project_dto.ProjectUpdateDTO,project_info)
+    if dto_error:
+        return dto_error
 
-    project_name = data.get("project_name")
-    project_describe = data.get("project_describe")
-    project_password = data.get("project_password")
+    project_id = dto.project_id
+    project_name = dto.project_name
+    project_describe = dto.project_describe
+    project_password = dto.project_password
 
-
-
-    # 参数缺失校验
-    required_fields = ["project_name", "project_describe", "project_password", "project_id"]
-
-    for field in required_fields:
-        if not data.get(field):
-            return respones.missing_parameter(msg=f"{field}不能为空")
-
-    if len(project_name) > 10 or len(project_describe) > 100 or len(project_password) > 8:
-        return respones.invalid_parameter(msg="项目名称最多10位，描述最多100位，密码最多8位")
 
     # 执行项目公共校验
     error = check_project(project_id,project_creator_id)
@@ -133,18 +126,19 @@ def service_update(data,project_creator_id):
         )
 
 
-def service_delete(data,project_creator_id):
+def service_delete(project_info,project_creator_id):
     """
     删除项目的service实现方法
     :param data:
     :param project_creator_id:
     :return:
     """
-    # 获取前端请求中传的project_id
-    project_id = data.get("project_id")
+    # dto参数校验
+    dto,dto_error = validate_dto(project_dto.ProjectDeleteDTO,project_info)
+    if dto_error:
+        return dto_error
 
-    if not project_id:
-        return respones.missing_parameter("参数为空")
+    project_id = dto.project_id
 
     # 执行项目公共校验
     error = check_project(project_id,project_creator_id)
@@ -166,6 +160,35 @@ def service_delete(data,project_creator_id):
                 "project_id":project_id
             }
         )
+
+def service_list(project_info,project_creator_id):
+    """
+    1、查询项目列表
+    2、根据项目名称搜索，通过动态sql绑定成一个接口
+    :param project_info:
+    :param project_creator_id:
+    :return:
+    """
+    dto,dto_error = validate_dto(project_dto.ProjectListDTO,project_info)
+    if dto_error:
+        return dto_error
+
+    page = dto.page
+    page_size = dto.page_size
+    project_name = dto.project_name
+
+    try:
+        result = project_repositories.list_projects_by_creator(project_creator_id,page,page_size,project_name)
+    except Exception as E:
+        print(f"数据库查询项目列表失败：{E}")
+        return respones.unknown_error(msg="查询列表失败")
+    else:
+        return respones.success(
+            msg="查询列表成功",
+            data=result
+        )
+
+
 
 
 
